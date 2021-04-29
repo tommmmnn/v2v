@@ -1,0 +1,11 @@
+<!-- -->
+<launch>
+
+	<node name="interface_node" pkg="interface" type="interface_node" output="screen">
+		<param name="can2serial_port" value="/dev/host_pc"/>
+		<param name="can_baudrate" value="250"/>
+		<param name="gps_topic" value="/gps" />
+	</node>
+
+
+</launch>

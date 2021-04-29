@@ -1,0 +1,7 @@
+<launch>
+	<node pkg="base_control" type="base_control_node" name="base_control_node" output="screen">
+		<param name="frame_id" value="channel1"/>
+		<param name="max_speed" value="15.0"/>
+		<param name="max_steering_angle" value="15.0"/>
+	</node>
+</launch>

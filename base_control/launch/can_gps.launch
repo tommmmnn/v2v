@@ -1,0 +1,11 @@
+<launch>
+	<node pkg="driveless" type="base_control" name="base_control_node" output="screen">
+		<param name="frame_id" value="channel1"/>
+		<param name="max_speed" value="15.0"/>
+		<param name="max_steering_angle" value="15.0"/>
+		<param name="cmd_topic" value="/to_usbcan"/>
+	</node>
+
+	<include file="$(find usbcan_driver)/launch/driver.launch"/>
+	<include file="$(find rslidar_pointcloud)/launch/rs_lidar_16.launch"/>
+</launch>

@@ -1,0 +1,17 @@
+
+uint8  command_type
+uint8  START_RECORD_PATH=1
+uint8  STOP_RECORD_PATH =2
+uint8  RECORD_CURRENT_POINT=3
+
+string path_file_name
+uint8  path_type
+uint8  VERTEX_TYPE=100
+uint8  CURVE_TYPE =101
+
+---
+
+uint8  SUCCESS = 0
+uint8  FAIL    = 1
+uint8  success
+uint16 point_cnt

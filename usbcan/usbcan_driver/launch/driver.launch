@@ -1,0 +1,9 @@
+<!--   -->
+
+<launch>
+	<node name="usbcan_driver_node" pkg="usbcan_driver" type="usbcan_driver_node" output="screen">
+		<rosparam param="baudrate" > [500,500] </rosparam>
+		<rosparam param="frame_id" > ["channel1","channel2"] </rosparam>
+	</node>
+
+</launch>

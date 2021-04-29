@@ -1,0 +1,9 @@
+<launch>
+
+	<node pkg="path" type="path_node" name="path_node" output="screen">
+		<param name="file_path" value="$(find path)/data"/>
+		<param name="in_file_name" value="1_101.txt"/>
+	</node>
+
+</launch>
+

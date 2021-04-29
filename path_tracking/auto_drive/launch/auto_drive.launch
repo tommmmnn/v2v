@@ -1,0 +1,55 @@
+<launch>
+	<arg name="utm_topic" value="/gps_odom"/>
+	<arg name="cmd_topic" value="/tracker_cmd"/>
+	<arg name="gps_port" value="/dev/ttyUSB0"/>
+
+	<!-- my_tracker -->
+	<node pkg="auto_drive" name="my_tracker_node" type="auto_drive_node" output="screen">
+		<param name="max_speed" value="20.0"/>
+		<param name="path_file_dir" value="$(find auto_drive)/data/"/>
+		<param name="utm_topic" value="$(arg utm_topic)"/>
+		<param name="cmd_topic" value="$(arg cmd_topic)"/>
+		<param name="foreSightDis_speedCoefficient" value="0.45"/>
+		<param name="foreSightDis_latErrCoefficient" value="0"/>
+		<param name="min_foresight_distance" value="5.0"/>
+		<param name="wheel_base" value="1.474"/>
+		<param name="yaw_road" value="6.191"/>
+	</node>
+
+	<!-- GPS -->
+	<node pkg="nuogeng" name="gps_node" type="nuogeng_node" output="screen" respawn="true">
+		<param name="port_name" value="$(arg gps_port)"/>
+		<param name="odom_topic" value="$(arg utm_topic)"/>
+		<param name="parent_frame_id" value="world"/>
+		<param name="child_frame_id" value="gps"/>
+		<param name="pub_odom" value="true"/>
+		<param name="pub_tf" value="false"/>
+	</node>
+
+	<!-- Record path -->
+	<arg name="file_name" default="3_101" />
+	<node name="record_gps_node" pkg="nuogeng" type="record_gps_node">
+		<param name="file_path" value="$(find auto_drive)/data/"/>
+		<param name="file_name" value="$(arg file_name).txt"/>
+		<param name="sample_distance" value="0.1" />
+		<param name="utm_topic" value="$(arg utm_topic)" />
+		<param name="gps_topic" value="/gps"/>
+	</node>
+
+	<!-- base_control -->
+	<node pkg="base_control" type="base_control_node" name="base_control_node" output="screen">
+		<param name="cmd_topic" value="$(arg cmd_topic)"/>
+		<param name="gps_topic" value="/gps"/>
+		<param name="frame_id" value="channel1"/>
+		<param name="yaw_road" value="6.191"/>
+		<param name="max_steering_angle" value="19.0"/>
+		<param name="ctrl_topic" value="/to_usbcan"/>
+		<param name="from_usbcan" value="/from_usbcan"/>
+	</node>
+
+	<!-- usb_can -->
+	<include file="$(find usbcan_driver)/launch/driver.launch"/>
+
+	<!-- LIDAR -->
+	<include file="$(find euclidean_cluster)/launch/lidar.launch"/>
+</launch>
