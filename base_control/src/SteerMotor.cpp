@@ -3,10 +3,10 @@
 
 SteerMotor::SteerMotor():
 	priv_nh("~"),
-	torque(-250),
-	kp(85),
-	ki(2.5),
-	kd(8)
+	torque(-200),	//初始力矩
+	kp(225),
+	ki(2),
+	kd(0)
 {
 	frames.frames.resize(FRAME_SIZE);
 	is_enabled_ = true;

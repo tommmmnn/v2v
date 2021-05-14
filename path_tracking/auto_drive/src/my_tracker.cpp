@@ -13,17 +13,17 @@
 #include "driverless_msgs/BaseControlState.h"
 
 #define __NAME__ "my_tracker"
-#define AVOIDING 0
+#define AVOIDING 1		//0普通跟踪，1避障，2调整后避障
 namespace fs = boost::filesystem;
 
 typedef boost::shared_mutex shared_mutex_t;
 typedef boost::unique_lock<shared_mutex_t> write_lock_t;
 typedef boost::shared_lock<shared_mutex_t> read_lock_t;
 
-class Tractor{
+class Tracker{
 public:
-	Tractor();
-	~Tractor();
+	Tracker();
+	~Tracker();
 	bool init();
 	void odom_callback(const nav_msgs::Odometry::ConstPtr& msg);
 	const gpsMsg_t currentPose();
@@ -64,7 +64,7 @@ private:
 	std::mutex base_state_mutex;
 };
 
-Tractor::Tractor():
+Tracker::Tracker():
 	priv_nh("~"),
 	tracker(nh, priv_nh)
 {
@@ -73,11 +73,11 @@ Tractor::Tractor():
 	m_pose.reset();		//位姿置0
 }
 
-Tractor::~Tractor()
+Tracker::~Tracker()
 {
 }
 
-bool Tractor::init()
+bool Tracker::init()
 {
 	priv_nh.param<float>("max_speed", m_max_speed, 20.0);
 	path_file_dir = priv_nh.param<std::string>("path_file_dir", "");
@@ -88,18 +88,18 @@ bool Tractor::init()
 	}
 
 	std::string utm_topic = priv_nh.param<std::string>("utm_topic", "/odom");
-	sub_utm = nh.subscribe(utm_topic, 1, &Tractor::odom_callback, this);
+	sub_utm = nh.subscribe(utm_topic, 1, &Tracker::odom_callback, this);
 
-	sub_ctrl_state = nh.subscribe("/base_control_state", 1, &Tractor::base_control_state_callback, this);
+	sub_ctrl_state = nh.subscribe("/base_control_state", 1, &Tracker::base_control_state_callback, this);
 
 	std::string cmd_topic = priv_nh.param<std::string>("cmd_topic", "/cmd");
 	pub_cmd = nh.advertise<driverless_msgs::ControlCmd>(cmd_topic, 1);
 	pub_state = nh.advertise<std_msgs::UInt8>("/system_state", 1);
 
-	update_timer = nh.createTimer(ros::Duration(0.02), &Tractor::update_timer_callback, this);
+	update_timer = nh.createTimer(ros::Duration(0.02), &Tracker::update_timer_callback, this);
 
-	srv_recorder = nh.advertiseService("record_path_service", &Tractor::recordPathService, this);
-	srv_driverless = nh.advertiseService("driverless_service", &Tractor::driverlessService, this);
+	srv_recorder = nh.advertiseService("record_path_service", &Tracker::recordPathService, this);
+	srv_driverless = nh.advertiseService("driverless_service", &Tracker::driverlessService, this);
 
 	if(!recorder.init()) return false;		//初始化记录对象
 
@@ -117,7 +117,7 @@ bool Tractor::init()
 }
 
 
-void Tractor::odom_callback(const nav_msgs::Odometry::ConstPtr& msg)
+void Tracker::odom_callback(const nav_msgs::Odometry::ConstPtr& msg)
 {
     write_lock_t write_lock(pose_wr_mutex);
     m_pose.x = msg->pose.pose.position.x;
@@ -131,21 +131,21 @@ void Tractor::odom_callback(const nav_msgs::Odometry::ConstPtr& msg)
     m_vehicle_speed = msg->twist.twist.linear.x;
 }
 
-void Tractor::base_control_state_callback(const driverless_msgs::BaseControlState::ConstPtr& msg)
+void Tracker::base_control_state_callback(const driverless_msgs::BaseControlState::ConstPtr& msg)
 {
 	base_state_mutex.lock();
 	m_base_state = *msg;
 	base_state_mutex.unlock();
 }
 
-const gpsMsg_t Tractor::currentPose()
+const gpsMsg_t Tracker::currentPose()
 {
     //ROS_INFO("const gpsMsg_t AutoDrive::currentPose()_");
     read_lock_t read_lock(pose_wr_mutex);
     return m_pose;
 }          
 
-void Tractor::update_timer_callback(const ros::TimerEvent&)
+void Tracker::update_timer_callback(const ros::TimerEvent&)
 {
 	m_cmd.header.stamp = ros::Time::now();
 	m_cmd.header.frame_id = "cmd";
@@ -176,7 +176,7 @@ void Tractor::update_timer_callback(const ros::TimerEvent&)
     pub_state.publish(state);
 }
 
-bool Tractor::recordPathService(interface::RecordPath::Request  &req,
+bool Tracker::recordPathService(interface::RecordPath::Request  &req,
 						   		  interface::RecordPath::Response &res)
 {
 	if(   sys_state.isBusy()      //系统正忙, 防止指令重复请求
@@ -198,7 +198,7 @@ bool Tractor::recordPathService(interface::RecordPath::Request  &req,
 			ROS_INFO("[%s] Request start record path: curve type.",__NAME__);
 		
 			//开始连续型路径记录，传入文件名、位置获取函数
-			bool ok = recorder.startCurvePathRecord(req.path_file_name, &Tractor::currentPose, this);
+			bool ok = recorder.startCurvePathRecord(req.path_file_name, &Tracker::currentPose, this);
 			if(!ok)
 			{
 				sys_state.set(sys_state.State_SystemIdle);
@@ -267,7 +267,7 @@ bool Tractor::recordPathService(interface::RecordPath::Request  &req,
 	return true;
 }
 
-bool Tractor::driverlessService(interface::Driverless::Request  &req,
+bool Tracker::driverlessService(interface::Driverless::Request  &req,
 								  interface::Driverless::Response &res)
 {
 	if(sys_state.isBusy() ||    //系统正忙
@@ -382,7 +382,7 @@ bool Tractor::driverlessService(interface::Driverless::Request  &req,
 			sys_state.set(sys_state.State_SystemIdle);
 			return true;
 		}
-		std::thread t(std::bind(&Tractor::autoDriveThread, this,req.speed));
+		std::thread t(std::bind(&Tracker::autoDriveThread, this,req.speed));
 		t.detach();
 	}
 	else if(req.command_type == req.STOP)     //请求停止，状态置为完成
@@ -402,14 +402,14 @@ bool Tractor::driverlessService(interface::Driverless::Request  &req,
 	return true;
 }
 
-void Tractor::autoDriveThread(float speed)
+void Tracker::autoDriveThread(float speed)
 {
 	std::lock_guard<std::mutex> lck(auto_drive_thread_mutex);
 
 	if(speed > m_max_speed)
 		speed = m_max_speed;
-	
-	ros::Rate loop_rate(20);
+	avoider.get_Target_Speed(speed);
+	ros::Rate loop_rate(100);
 	
 	while(ros::ok() && sys_state.isTracking())
 	{
@@ -421,8 +421,19 @@ void Tractor::autoDriveThread(float speed)
 		}
 		*/
 		pose_wr_mutex.lock_shared();
-		#if AVOIDING
-		bool update_state = tracker.update(speed, m_base_state.roadWheelAngle, m_pose, avoider.getPathOffset(speed)); //当前速度用GPS的数据，转角用CAN总线的数据
+		#if AVOIDING == 2 
+		if(!avoider.is_adjusting || 1==avoider.is_adjusting)	//非变道阶段
+		{
+			bool update_state = tracker.update(speed, m_base_state.roadWheelAngle, m_pose, 0);
+		}
+		else if(2 == avoider.is_adjusting)
+		{
+			bool update_state = tracker.update(speed, m_base_state.roadWheelAngle, m_pose, avoider.getPathOffset(speed));
+		}
+		else 
+			bool update_state = tracker.update(speed, m_base_state.roadWheelAngle, m_pose, -2.5);
+		#elif AVOIDING == 1
+			bool update_state = tracker.update(speed, m_base_state.roadWheelAngle, m_pose, avoider.getPathOffset(speed));
 		#else 
 		bool update_state = tracker.update(speed, m_base_state.roadWheelAngle, m_pose, 0); //当前速度用GPS的数据，转角用CAN总线的数据
 		#endif
@@ -437,7 +448,15 @@ void Tractor::autoDriveThread(float speed)
 			break;
 		}
 		else
-        	tracker.getTrackingCmd(m_cmd.set_speed, m_cmd.set_roadWheelAngle);    //速度和转角控制
+        {
+			tracker.getTrackingCmd(m_cmd.set_speed, m_cmd.set_roadWheelAngle);    //速度和转角控制
+		#if AVOIDING==2
+			if(1 == avoider.is_adjusting)		//调整阶段
+			{
+				m_cmd.set_speed = avoider.generate_Adjust_Speed(-0.6, 0.6, 2, speed);
+			}
+		#endif
+		}
 		loop_rate.sleep();
 	} //自动驾驶完成
 	
@@ -450,8 +469,8 @@ int main(int argc, char** argv)
 	ros::AsyncSpinner spinner(4);
 	spinner.start();
 
-	Tractor tractor;
-	if(tractor.init())
+	Tracker tracker;
+	if(tracker.init())
 	{
 		ros::waitForShutdown();
 	}

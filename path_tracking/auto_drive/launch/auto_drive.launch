@@ -9,11 +9,15 @@
 		<param name="path_file_dir" value="$(find auto_drive)/data/"/>
 		<param name="utm_topic" value="$(arg utm_topic)"/>
 		<param name="cmd_topic" value="$(arg cmd_topic)"/>
-		<param name="foreSightDis_speedCoefficient" value="0.45"/>
-		<param name="foreSightDis_latErrCoefficient" value="0"/>
-		<param name="min_foresight_distance" value="5.0"/>
+		<param name="foreSightDis_speedCoefficient" value="1.0"/>
+		<param name="foreSightDis_latErrCoefficient" value="-0.2"/>
+		<param name="min_foresight_distance" value="3.75"/>
 		<param name="wheel_base" value="1.474"/>
-		<param name="yaw_road" value="6.191"/>
+		<!--AVOIDING CONFIG-->
+		<param name="yaw_road" value="4.640"/>
+		<param name="a_max" value="2.0"/>
+		<param name="resolution" value="0.1"/>
+
 	</node>
 
 	<!-- GPS -->
@@ -41,7 +45,7 @@
 		<param name="cmd_topic" value="$(arg cmd_topic)"/>
 		<param name="gps_topic" value="/gps"/>
 		<param name="frame_id" value="channel1"/>
-		<param name="yaw_road" value="6.191"/>
+		<param name="yaw_road" value="4.640"/>
 		<param name="max_steering_angle" value="19.0"/>
 		<param name="ctrl_topic" value="/to_usbcan"/>
 		<param name="from_usbcan" value="/from_usbcan"/>

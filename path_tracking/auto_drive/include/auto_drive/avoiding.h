@@ -24,13 +24,27 @@ public:
 	float getPathOffset(float target_speed);
 	float return_Offset_By_Time(float target_speed);
 	bool setPath(path_t path);
+	bool generate_Acceleration(gpsMsg_t m_pose, float &a_A1, float &a_A2, float &a_B1, float &a_B2);
+	float adjust_Velocity(float origin_v, float a, float t_ad);
+	float generate_Adjust_Speed(float a1, float a2, uint8_t t_ad, float origin_speed);
+	void get_Target_Speed(float target_speed);
+	
+public:
+	uint8_t is_adjusting; //0:非调整 1：纵向调整 2：变道 3:完成变道
 
 private:
 	uint8_t lane;
 	float vehicle_width;
+	float vehicle_length;
 	path_t m_path;
 	float yaw_road;
 	float m_target_speed;
+	float a_max;		//最大调整加速度
+	float res;			//for循环分辨率
+	float t_ad;			//每一段调整时间
+	float D_detect;		//激光雷达检测障碍物时开始调整的距离
+
+
 
 	message_filters::Subscriber<jsk_recognition_msgs::BoundingBoxArray> sub_boundingboxes;
 	message_filters::Subscriber<nav_msgs::Odometry> sub_utm;

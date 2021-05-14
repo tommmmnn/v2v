@@ -155,6 +155,7 @@ bool PathTracking::update(float speed, float road_wheelangle,  //vehicle state
 	disThreshold_ = foreSightDis_latErrCoefficient_ * fabs(lateral_err_) 
 				  + foreSightDis_speedCoefficient_  * vehicle_speed_
 				  + min_foresight_distance_;
+	if(disThreshold_ < min_foresight_distance_) disThreshold_ = min_foresight_distance_;
 	if( path_offset != 0.0)
 		target_point_ = pointOffset(target_point_, path_offset);			  
 
@@ -186,7 +187,7 @@ bool PathTracking::update(float speed, float road_wheelangle,  //vehicle state
 	t_roadwheel_angle_ = generateRoadwheelAngleByRadius(turning_radius, wheel_base_);
 	
 	//跟踪完成
-	if(nearest_point_index_ > destination_index_-10)
+	if(nearest_point_index_ > destination_index_-30)
 	{
 		t_speed_ = 0.0;
 		return false;
@@ -204,7 +205,7 @@ bool PathTracking::update(float speed, float road_wheelangle,  //vehicle state
 		// ROS_INFO("dis2target:%.2f\t yaw_err:%.2f\t lat_err:%.2f",dis_yaw.first,yaw_err*180.0/M_PI,lateral_err_);
 		// ROS_INFO("disThreshold:%f\t expect angle:%.2f\t true_angle:%.2f",disThreshold_,t_roadwheel_angle_, road_wheelangle);
 		// ROS_INFO("path_yaw:%.2f\t yaw:%.2f", path_.points[nearest_point_index_].yaw*180.0/M_PI, current_pos_.yaw*180./M_PI);
-		ROS_INFO("current_speed: %.2f km/h", vehicle_speed_*3.6);
+		// ROS_INFO("current_speed: %.2f km/h", vehicle_speed_*3.6);
 	}
 	this->publishInfo();
 	return true;
@@ -232,10 +233,12 @@ void PathTracking::getTrackingCmd(float& speed, float& roadWheelAngle)
 
 void PathTracking::publishInfo()
 {
+	info_.header.stamp = ros::Time::now();
+	info_.header.frame_id = "tracking_info";
 	info_.nearest_point_index = nearest_point_index_;
 	info_.target_point_index = target_point_index_;
 	info_.speed = vehicle_speed_;
-	info_.lateral_err = lateral_err_/3.0;
+	info_.lateral_err = lateral_err_;
 	info_.latitude = current_pos_.latitude;
 	info_.longitude = current_pos_.longitude;
 

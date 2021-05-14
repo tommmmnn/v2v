@@ -91,7 +91,7 @@ bool Car_Control::init()
 	std::string gps_topic = priv_nh.param<std::string>("gps_topic", "/gps");
 	sub_gps.subscribe(nh, gps_topic, 1);
 	sub_cmd.subscribe(nh, cmd_topic, 1);
-	sync_.reset(new Sync(syncPolicy(1000),sub_gps,sub_cmd));
+	sync_.reset(new Sync(syncPolicy(10),sub_gps,sub_cmd));
 	sync_->registerCallback(boost::bind(&Car_Control::cmd_callback, this, _1, _2));
 	// message_filters::TimeSynchronizer<gps_msgs::Inspvax, driverless_msgs::ControlCmd> sync(sub_gps, sub_cmd, 10);
 	// sync.registerCallback(boost::bind(&Car_Control::cmd_callback, this, _1, _2));
@@ -113,7 +113,7 @@ void Car_Control::cmd_callback(const gps_msgs::Inspvax::ConstPtr& gps_msg, const
 	static int try_disable_motor_cnt = 0;
 	float v_e = gps_msg->east_velocity;
 	float v_n = gps_msg->north_velocity;
-	current_speed = v_e * cos(theta) + v_n * sin(theta); 
+	current_speed = v_e * cos(theta) + v_n * sin(theta);    //沿路径的纵向速度，theta为路径航向角
 	if(!msg->driverless_mode && driverless_mode)	//上一次处于自动驾驶模式,当前请求关闭
 	{
 		try_disable_motor_cnt = 50;
@@ -121,7 +121,7 @@ void Car_Control::cmd_callback(const gps_msgs::Inspvax::ConstPtr& gps_msg, const
 	if(!msg->driverless_mode)
 	{
 		steermotor.SetBrake(msg->set_brake);
-		steermotor.pidController(msg->set_speed * 3.6, current_speed * 3.6);
+		steermotor.pidController(msg->set_speed, current_speed);
 		if(try_disable_motor_cnt > 0)
 		{
 			--try_disable_motor_cnt;
@@ -132,7 +132,7 @@ void Car_Control::cmd_callback(const gps_msgs::Inspvax::ConstPtr& gps_msg, const
 	else
 	{
 		steermotor.Steering_Control(msg->set_roadWheelAngle);
-		steermotor.pidController(msg->set_speed * 3.6, current_speed * 3.6);
+		steermotor.pidController(msg->set_speed, current_speed);
 	//	steermotor.SetBrake(-0.5);
 	//	steermotor.SetBrake(msg->set_brake);
 		steermotor.publishCtrl();
